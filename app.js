@@ -17,8 +17,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', adminData.routes);
 app.use(shopRoutes);
 
+// 404 handler - render('404') automatically appends .pug extension
+// based on the view engine setting
 app.use((req, res, next) => {
-    res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
+    res.status(404).render('404');
 });
 
 app.listen(3000);
