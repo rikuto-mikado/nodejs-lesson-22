@@ -765,3 +765,9 @@ Then open your browser to: **http://localhost:3000**
 - **Variables, loops, conditionals** - all built into Pug
 
 **Most important concept:** Template inheritance lets you write common HTML (header, nav, footer) **once** and reuse it everywhere, making maintenance much easier!
+
+---
+
+## Memo
+
+This lesson's core concept is **template inheritance** using `extends` + `block`. The parent template defines the common structure (header, navigation) with `block` placeholders, and child templates fill those placeholders with unique content. This eliminates code duplication - instead of repeating 150 lines of HTML in every file, you write it once in the parent and each child only needs 10-20 lines of unique content.
