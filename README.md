@@ -159,110 +159,142 @@ block content
 ### 3. Understanding `block`
 
 **What is a `block`?**
-- A **placeholder** in the parent template
-- Child templates can **fill or override** these placeholders
-- Think of it like a **slot** where children inject their content
 
-**How it works:**
+A `block` is a **placeholder** (blank space) in the parent template that child templates can fill with their own content.
 
-| Component | Role | Example |
-|-----------|------|---------|
-| **Parent defines block** | Creates a placeholder | `block styles` |
-| **Child fills block** | Provides content for that placeholder | `block styles` + CSS links |
-| **Result** | Child's content appears where parent defined the block | Additional CSS loads for that page only |
-
-**Visual Flow:**
-
-```
-Parent (main-layout.pug):
-┌─────────────────────┐
-│ <head>              │
-│   <link main.css>   │
-│   [block styles]  ← │ Placeholder for child CSS
-│ </head>             │
-│ <body>              │
-│   <header>...</>    │
-│   [block content] ← │ Placeholder for child content
-│ </body>             │
-└─────────────────────┘
-
-Child (add-product.pug):
-┌─────────────────────┐
-│ extends parent      │
-│                     │
-│ block styles:       │
-│   forms.css       →│ Fills parent's "styles" block
-│   product.css     →│
-│                     │
-│ block content:      │
-│   <form>...</>    →│ Fills parent's "content" block
-└─────────────────────┘
-
-Final Output:
-┌─────────────────────┐
-│ <head>              │
-│   <link main.css>   │
-│   <link forms.css>  │← From child's "styles" block
-│   <link product.css>│
-│ </head>             │
-│ <body>              │
-│   <header>...</>    │
-│   <form>...</>      │← From child's "content" block
-│ </body>             │
-└─────────────────────┘
-```
+**Simple analogy:**
+- Parent template = A form with blank fields
+- `block` = The blank fields like "Name: _____", "Address: _____"
+- Child template = Fills in those blank fields with actual values
 
 ---
 
-### 4. Passing Data from Server to Template
+#### How `block` works step by step
 
-**Server Side (routes/shop.js):**
-
-```javascript
-router.get('/', (req, res, next) => {
-  const products = adminData.products;
-
-  // res.render(templateName, dataObject)
-  res.render('shop', {
-    prods: products,        // prods: variable name in template
-    docTitle: 'Shop'        // docTitle: page title
-  });
-});
-```
-
-**Template Side (shop.pug):**
+**Step 1: Parent defines blocks (placeholders)**
 
 ```pug
-//- Access variables passed from server
-title #{docTitle}
-
-//- Use conditionals
-if prods.length > 0
-    .grid
-        //- Loop through array
-        //- "each [item] in [array]" syntax
-        each product in prods
-            article.card.product-item
-                h1.product__title #{product.title}
-else
-    h1 No Products
+// layouts/main-layout.pug
+doctype html
+html
+    head
+        link(rel="stylesheet", href="/css/main.css")
+        block styles    ← Empty placeholder named "styles"
+    body
+        header Navigation here
+        block content   ← Empty placeholder named "content"
 ```
 
-**Data Flow:**
+**Step 2: Child extends parent and fills blocks**
 
+```pug
+// add-product.pug
+extends layouts/main-layout.pug
+
+block styles           ← Fill the "styles" placeholder
+    link(rel="stylesheet", href="/css/forms.css")
+
+block content          ← Fill the "content" placeholder
+    h1 Add Product
+    form Product form here
 ```
-Server (shop.js)
-    ↓
-res.render('shop', { prods: [...], docTitle: 'Shop' })
-    ↓
-Template receives: { prods: [...], docTitle: 'Shop' }
-    ↓
-Can use: #{docTitle}, #{product.title}, etc.
+
+**Step 3: Pug merges them together**
+
+```html
+<!-- Final output -->
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/css/main.css">
+        <!-- Content from child's "block styles" goes here -->
+        <link rel="stylesheet" href="/css/forms.css">
+    </head>
+    <body>
+        <header>Navigation here</header>
+        <!-- Content from child's "block content" goes here -->
+        <h1>Add Product</h1>
+        <form>Product form here</form>
+    </body>
+</html>
 ```
 
 ---
 
-### 5. Pug Syntax Essentials
+#### Why do we need `block`?
+
+**Without `block`:**
+- Parent has fixed content
+- Child can't add anything unique
+- Every page looks exactly the same
+
+**With `block`:**
+- Parent provides common structure (header, navigation)
+- Child adds unique content (product form, shop page, 404 message)
+- Each page has same structure but different content
+
+**Example: Two different pages using the same parent**
+
+```pug
+// Parent: main-layout.pug
+html
+    body
+        header Navigation
+        block content    ← Different for each page
+
+// Child 1: shop.pug
+extends main-layout.pug
+block content
+    h1 Shop            ← Shop-specific content
+
+// Child 2: 404.pug
+extends main-layout.pug
+block content
+    h1 Not Found       ← 404-specific content
+```
+
+Result: Both pages have navigation, but different content!
+
+---
+
+#### Multiple blocks example
+
+You can have many blocks for different customization points:
+
+```pug
+// Parent
+html
+    head
+        block title
+            title Default Title
+        block styles
+    body
+        header
+            block header
+        main
+            block content
+        footer
+            block footer
+```
+
+Child only needs to fill the blocks it wants to customize:
+
+```pug
+// Child fills only some blocks
+extends parent
+
+block title
+    title My Page
+
+block content
+    p Hello World
+
+// Other blocks (header, footer) use parent's default or stay empty
+```
+
+---
+
+### 4. Pug Syntax Essentials
 
 #### Tags and Nesting
 
@@ -348,74 +380,6 @@ each product in products
     p= product.title
 else
     p No products found
-```
-
----
-
-### 6. Express Configuration
-
-```javascript
-// app.js
-
-const express = require('express');
-const app = express();
-
-// Tell Express to use Pug as the template engine
-app.set('view engine', 'pug');
-
-// Specify where to find templates (default: 'views' folder)
-app.set('views', 'views');
-
-// Render a template
-app.get('/', (req, res) => {
-    // Express automatically:
-    // 1. Looks for views/shop.pug
-    // 2. Compiles it to HTML
-    // 3. Sends HTML to client
-    res.render('shop', { prods: [], docTitle: 'Shop' });
-});
-```
-
----
-
-## Project Structure
-
-```
-nodejs-lesson-22/
-│
-├── app.js                          # Main application entry point
-│   └── Sets up Express, Pug, routes
-│
-├── routes/
-│   ├── admin.js                   # Admin routes (/admin/add-product)
-│   │   └── Handles GET/POST for adding products
-│   └── shop.js                    # Shop routes (/)
-│       └── Displays products list
-│
-├── views/                          # Pug templates
-│   ├── layouts/
-│   │   └── main-layout.pug       # Parent template with blocks
-│   │       ├── block styles      # For child-specific CSS
-│   │       └── block content     # For child page content
-│   │
-│   ├── add-product.pug            # Extends main-layout
-│   │   ├── Adds forms.css + product.css to styles block
-│   │   └── Product form in content block
-│   │
-│   ├── shop.pug                   # Standalone (doesn't extend)
-│   │   └── Displays all products or "No Products"
-│   │
-│   └── 404.pug                    # Extends main-layout
-│       └── Simple error message
-│
-├── public/                        # Static files served by Express
-│   └── css/
-│       ├── main.css              # Global styles (header, buttons, cards)
-│       ├── forms.css             # Form input styles
-│       └── product.css           # Product-specific styles
-│
-└── util/
-    └── path.js                    # Helper to get project root directory
 ```
 
 ---
